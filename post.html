@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            line-height: 1.8;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: #007bff;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .back-btn:hover {
+            text-decoration: underline;
+        }
+
+        .post-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .post-title {
+            font-size: 2rem;
+            color: #222;
+            margin-bottom: 1rem;
+        }
+
+        .post-meta {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .post-content {
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        /* Markdown 渲染基础样式 */
+        .post-content h1 {
+            font-size: 1.8rem;
+            margin: 1.5rem 0 1rem;
+            border-left: 4px solid #007bff;
+            padding-left: 12px;
+        }
+
+        .post-content h2 {
+            font-size: 1.5rem;
+            margin: 1.4rem 0 0.8rem;
+        }
+
+        .post-content h3 {
+            font-size: 1.25rem;
+            margin: 1.2rem 0 0.6rem;
+        }
+
+        .post-content p {
+            margin: 1rem 0;
+        }
+
+        .post-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .post-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .post-content pre {
+            background: #272822;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .post-content pre code {
+            background: transparent;
+            color: inherit;
+        }
+
+        .post-content ul, .post-content ol {
+            padding-left: 1.8rem;
+            margin: 1rem 0;
+        }
+
+        .empty-tip {
+            text-align: center;
+            padding: 6rem 0;
+            color: #999;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← 返回首页</a>
+
+    <div id="postWrap">
+        <div class="empty-tip">加载中...</div>
+    </div>
+
+    <script>
+        // 获取URL参数中的文章ID
+        function getQueryId() {
+            const params = new URLSearchParams(location.search)
+            return params.get('id')
+        }
+
+        // 加载文章详情
+        async function loadPostDetail() {
+            const id = getQueryId()
+            const wrap = document.getElementById('postWrap')
+
+            if (!id) {
+                wrap.innerHTML = '<div class="empty-tip">文章不存在</div>'
+                return
+            }
+
+            try {
+                const res = await fetch(`/api/post?id=${id}`)
+                const data = await res.json()
+
+                if (!data || !data.id) {
+                    wrap.innerHTML = '<div class="empty-tip">文章已删除或不存在</div>'
+                    return
+                }
+
+                // 渲染文章详情
+                wrap.innerHTML = `
+                    <div class="post-header">
+                        <h1 class="post-title">${data.title}</h1>
+                        <div class="post-meta">发布时间：${data.create_time}</div>
+                    </div>
+                    <div class="post-content">${data.content}</div>
+                `
+                // 修改网页标题为文章标题
+                document.title = data.title
+
+            } catch (err) {
+                wrap.innerHTML = '<div class="empty-tip">文章加载失败，请稍后重试</div>'
+                console.error('详情加载失败：', err)
+            }
+        }
+
+        window.onload = loadPostDetail
+    </script>
+</body>
+</html>
