@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章编辑器</title>
+    <!-- 引入轻量化MD编辑器 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+            background: #f7f8fa;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .header h2 {
+            color: #222;
+            font-size: 1.4rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.8rem;
+        }
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+        .btn-back {
+            background: #eee;
+            color: #333;
+        }
+        .btn-draft {
+            background: #ff9800;
+            color: #fff;
+        }
+        .btn-publish {
+            background: #4caf50;
+            color: #fff;
+        }
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .input-title {
+            width: 100%;
+            padding: 0.9rem;
+            font-size: 1.3rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 1.2rem;
+            outline: none;
+        }
+        .input-title:focus {
+            border-color: #007bff;
+        }
+        .tip {
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .success-tip {
+            color: #4caf50;
+        }
+        .error-tip {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 id="editTitleText">新建文章</h2>
+        <div class="btn-group">
+            <button class="btn btn-back" onclick="goBack()">返回列表</button>
+            <button class="btn btn-draft" onclick="saveDraft()">保存草稿</button>
+            <button class="btn btn-publish" onclick="savePublish()">直接发布</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <input type="text" id="articleTitle" class="input-title" placeholder="请输入文章标题">
+        <textarea id="editor"></textarea>
+    </div>
+
+    <div class="tip" id="saveTip"></div>
+
+    <script>
+        const token = localStorage.getItem('blog_token')
+        let articleId = ''
+        let easyMDE = null
+
+        // 未登录跳转登录页
+        if (!token) {
+            location.href = '/admin/login.html'
+        }
+
+        // 初始化编辑器
+        function initEditor() {
+            easyMDE = new EasyMDE({
+                spellChecker: false,
+                autosave: false,
+                toolbar: ["heading", "bold", "italic", "strikethrough", "code", "quote", "unordered-list", "ordered-list", "link", "image", "table", "preview", "side-by-side", "fullscreen", "guide"],
+                uploadImage: true,
+                imageUploadFunction: uploadImage
+            })
+        }
+
+        // 图片上传对接后端
+        async function uploadImage(file, onSuccess, onError) {
+            const formData = new FormData()
+            formData.append('file', file)
+            try {
+                const res = await fetch('/api/admin/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token
+                    },
+                    body: formData
+                })
+                const data = await res.json()
+                if (data.success) {
+                    onSuccess(data.url)
+                } else {
+                    onError('上传失败')
+                }
+            } catch (e) {
+                onError('网络错误')
+            }
+        }
+
+        // 统一请求方法
+        async function req(url, opts = {}) {
+            return fetch(url, {
+                ...opts,
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json',
+                    ...opts.headers
+                }
+            })
+        }
+
+        // 返回列表
+        function goBack() {
+            location.href = '/admin/index.html'
+        }
+
+        // 获取URL文章ID（编辑模式）
+        function getQueryId() {
+            const params = new URLSearchParams(location.search)
+            return params.get('id') || ''
+        }
+
+        // 加载编辑文章数据
+        async function loadEditData() {
+            articleId = getQueryId()
+            if (!articleId) return
+
+            // 修改页面标题
+            document.getElementById('editTitleText').innerText = '编辑文章'
+
+            try {
+                const res = await req(`/api/admin/article/detail?id=${articleId}`)
+                const data = await res.json()
+                if (data.success) {
+                    document.getElementById('articleTitle').value = data.title || ''
+                    easyMDE.value(data.content || '')
+                }
+            } catch (e) {
+                showTip('文章数据加载失败', false)
+            }
+        }
+
+        // 显示提示信息
+        function showTip(text, isSuccess = true) {
+            const tipDom = document.getElementById('saveTip')
+            tipDom.innerText = text
+            tipDom.className = isSuccess ? 'tip success-tip' : 'tip error-tip'
+            setTimeout(() => tipDom.innerText = '', 2000)
+        }
+
+        // 保存草稿
+        async function saveDraft() {
+            await saveArticle(true)
+        }
+
+        // 发布文章
+        async function savePublish() {
+            await saveArticle(false)
+        }
+
+        // 统一保存逻辑
+        async function saveArticle(isDraft) {
+            const title = document.getElementById('articleTitle').value.trim()
+            const content = easyMDE.value().trim()
+
+            if (!title) {
+                showTip('请输入文章标题', false)
+                return
+            }
+            if (!content) {
+                showTip('请输入文章内容', false)
+                return
+            }
+
+            try {
+                const res = await req('/api/admin/article/save', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        id: articleId,
+                        title,
+                        content,
+                        is_draft: isDraft
+                    })
+                })
+
+                const data = await res.json()
+                if (data.success) {
+                    showTip(isDraft ? '草稿保存成功！' : '文章发布成功！')
+                    // 新建文章保存后更新ID，避免重复新建
+                    if (!articleId && data.id) {
+                        articleId = data.id
+                    }
+                } else {
+                    showTip(data.message || '保存失败', false)
+                }
+            } catch (e) {
+                showTip('网络请求失败', false)
+            }
+        }
+
+        // 页面初始化
+        window.onload = () => {
+            initEditor()
+            setTimeout(loadEditData, 200)
+        }
+    </script>
+</body>
+</html>
