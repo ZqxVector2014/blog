@@ -1,3 +1,4 @@
+// 备用：当前项目切换为GitHub图床，本文件暂时不启用
 // src/r2.ts
 import type { Env } from './env'
 
