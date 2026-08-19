@@ -1,25 +1,7 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "blog-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-08-01",
-  "assets": {
-    "directory": "./public"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "你的D1数据库名",
-      "database_id": "你的D1数据库UUID"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "BUCKET",
-      "bucket_name": "你的R2存储桶名称"
-    }
-  ],
   "vars": {
-    "ADMIN_SECRET": "自定义管理员密码密钥"
+    "ADMIN_SECRET": "zqxcc6666",
+    "GITHUB_USERNAME": "Zqx_Vector_2014",
+    "GITHUB_REPO": "blog-images",
+    "GITHUB_BRANCH": "main",
+    "GITHUB_PAT": "后续生成的PAT令牌"
   }
-}
