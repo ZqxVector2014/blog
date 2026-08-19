@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博客后台管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            background: #f7f8fa;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .header h2 {
+            color: #222;
+        }
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: #fff;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        .btn-outline {
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .article-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .article-item:last-child {
+            border-bottom: none;
+        }
+        .article-info h3 {
+            font-size: 1.1rem;
+            color: #222;
+            margin-bottom: 4px;
+        }
+        .article-meta {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .tag-draft {
+            color: #ff9800;
+        }
+        .tag-publish {
+            color: #4caf50;
+        }
+        .article-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .empty {
+            text-align: center;
+            padding: 3rem 0;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>文章管理</h2>
+        <div>
+            <button class="btn btn-primary" onclick="goEdit()">➕ 新建文章</button>
+            <button class="btn btn-outline" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div id="listWrap">加载中...</div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('blog_token')
+
+        // 未登录直接跳转登录页
+        if (!token) {
+            location.href = '/admin/login.html'
+        }
+
+        // 请求统一携带token
+        async function req(url, opts = {}) {
+            return fetch(url, {
+                ...opts,
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/json',
+                    ...opts.headers
+                }
+            })
+        }
+
+        // 跳转编辑器（新建 / 编辑）
+        function goEdit(id = '') {
+            location.href = `/admin/editor.html${id ? '?id=' + id : ''}`
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('blog_token')
+            location.href = '/admin/login.html'
+        }
+
+        // 删除文章
+        async function del(id) {
+            if (!confirm('确定删除该文章？')) return
+            const res = await req(`/api/admin/article/delete?id=${id}`, { method: 'POST' })
+            const data = await res.json()
+            if (data.success) {
+                loadList()
+            } else {
+                alert(data.message || '删除失败')
+            }
+        }
+
+        // 加载文章列表
+        async function loadList() {
+            const wrap = document.getElementById('listWrap')
+            try {
+                const res = await req('/api/admin/article/list')
+                const list = await res.json()
+                if (!list || list.length === 0) {
+                    wrap.innerHTML = '<div class="empty">暂无文章，点击【新建文章】开始创作</div>'
+                    return
+                }
+                let html = ''
+                list.forEach(item => {
+                    const statusText = item.is_draft ? '<span class="tag-draft">草稿</span>' : '<span class="tag-publish">已发布</span>'
+                    html += `
+                    <div class="article-item">
+                        <div class="article-info">
+                            <h3>${item.title || '无标题'}</h3>
+                            <div class="article-meta">${item.create_time} · ${statusText}</div>
+                        </div>
+                        <div class="article-actions">
+                            <button class="btn btn-outline" onclick="goEdit(${item.id})">编辑</button>
+                            <button class="btn btn-danger" onclick="del(${item.id})">删除</button>
+                        </div>
+                    </div>
+                    `
+                })
+                wrap.innerHTML = html
+            } catch (e) {
+                wrap.innerHTML = '<div class="empty">加载失败，请重新登录</div>'
+            }
+        }
+
+        window.onload = loadList
+    </script>
+</body>
+</html>
