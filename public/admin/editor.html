@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑器</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+        .container{max-width:900px;margin:2rem auto;padding:0 1rem}
+        input,textarea{width:100%;margin:0.5rem 0;padding:0.75rem;border:1px solid #ccc;border-radius:6px}
+        textarea{min-height:350px;font-family:monospace}
+        .row{display:flex;gap:1rem;align-items:center;margin:0.5rem 0}
+        button{padding:0.6rem 1rem;cursor:pointer}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Markdown 编辑器</h2>
+        <input id="title" placeholder="文章标题">
+        <textarea id="content" placeholder="在这里写 Markdown"></textarea>
+        <div class="row">
+            <label><input type="checkbox" id="draft"> 保存为草稿</label>
+            <button onclick="uploadImg()">上传图片</button>
+            <button onclick="save()">保存</button>
+        </div>
+        <input type="file" id="file" accept="image/*" hidden>
+    </div>
+    <script>
+        const token = localStorage.getItem("token")
+        if(!token) location.href="login.html"
+        let editId = null
+        const params = new URLSearchParams(location.search)
+        const id = params.get("id")
+        if(id) editId = Number(id)
+
+        // 编辑模式回填数据
+        (async ()=>{
+            if(!editId) return
+            const res = await fetch(`/api/admin/article?id=${editId}`,{
+                headers:{"Authorization":token}
+            })
+            const json = await res.json()
+            document.getElementById("title").value = json.data.title
+            document.getElementById("content").value = json.data.content
+            document.getElementById("draft").checked = json.data.is_draft === 1
+        })()
+
+        function uploadImg(){
+            document.getElementById("file").click()
+        }
+        document.getElementById("file").onchange = async e=>{
+            const fd = new FormData()
+            fd.append("file",e.target.files[0])
+            const res = await fetch("/api/admin/upload",{
+                method:"POST",
+                headers:{"Authorization":token},
+                body:fd
+            })
+            const json = await res.json()
+            if(json.success){
+                const ta = document.getElementById("content")
+                ta.value += `![image](${json.url})`
+            }else alert(json.msg)
+        }
+
+        async function save(){
+            const title = document.getElementById("title").value.trim()
+            const content = document.getElementById("content").value
+            const is_draft = document.getElementById("draft").checked ? 1 : 0
+            if(!title) return alert("填写标题")
+            let res
+            if(editId){
+                res = await fetch("/api/admin/article/update",{
+                    method:"PUT",
+                    headers:{"Authorization":token,"Content-Type":"application/json"},
+                    body:JSON.stringify({id:editId,title,content,is_draft})
+                })
+            }else{
+                res = await fetch("/api/admin/article/create",{
+                    method:"POST",
+                    headers:{"Authorization":token,"Content-Type":"application/json"},
+                    body:JSON.stringify({title,content,is_draft})
+                })
+            }
+            const json = await res.json()
+            if(json.success){
+                alert("保存成功")
+                location.href="index.html"
+            }else alert(json.msg)
+        }
+    </script>
+</body>
+</html>
