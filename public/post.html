@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章详情</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+        .container{max-width:800px;margin:4rem auto;padding:0 1rem}
+        h1{margin-bottom:0.5rem}
+        .time{color:#666;margin-bottom:2rem}
+        .content img{max-width:100%}
+        a{color:#0066cc}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html">← 返回首页</a>
+        <h1 id="title"></h1>
+        <div class="time" id="time"></div>
+        <div class="content" id="html"></div>
+    </div>
+    <script>
+        async function load(){
+            const params = new URLSearchParams(location.search)
+            const id = params.get("id")
+            const res = await fetch(`/api/post?id=${id}`)
+            const json = await res.json()
+            document.getElementById("title").innerText = json.data.title
+            document.getElementById("time").innerText = json.data.create_time
+            document.getElementById("html").innerHTML = json.data.html
+        }
+        load()
+    </script>
+</body>
+</html>
