@@ -3,155 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>后台登录</title>
+    <title>管理员登录</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f5f7fa;
-        }
-
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            background: #fff;
-            padding: 2.5rem 2rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-
-        .login-title {
-            text-align: center;
-            font-size: 1.8rem;
-            color: #222;
-            margin-bottom: 2rem;
-        }
-
-        .input-item {
-            margin-bottom: 1.5rem;
-        }
-
-        .input-item label {
-            display: block;
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 0.5rem;
-        }
-
-        .input-item input {
-            width: 100%;
-            padding: 0.9rem 1rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border 0.2s;
-        }
-
-        .input-item input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 0.9rem;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .login-btn:hover {
-            background-color: #0066cc;
-        }
-
-        .tip-text {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            color: #999;
-        }
-
-        .error-tip {
-            color: #e53935;
-            text-align: center;
-            margin: 0.5rem 0;
-            height: 20px;
-            font-size: 0.9rem;
-        }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+        .box{max-width:400px;margin:6rem auto;padding:2rem}
+        input{width:100%;padding:0.75rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:6px}
+        button{width:100%;padding:0.75rem;background:#222;color:#fff;border:none;border-radius:6px;cursor:pointer}
+        #msg{margin-top:1rem;color:red}
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h2 class="login-title">博客后台登录</h2>
-        <div class="input-item">
-            <label>管理员密码</label>
-            <input type="password" id="pwd" placeholder="请输入后台密码">
-        </div>
-        <div class="error-tip" id="errTip"></div>
-        <button class="login-btn" id="loginBtn">登录后台</button>
-        <div class="tip-text">验证通过即可进入文章管理后台</div>
+    <div class="box">
+        <h2>后台登录</h2>
+        <input type="password" id="pwd" placeholder="管理员密码">
+        <button onclick="login()">登录</button>
+        <div id="msg"></div>
     </div>
-
     <script>
-        const pwdInput = document.getElementById('pwd')
-        const loginBtn = document.getElementById('loginBtn')
-        const errTip = document.getElementById('errTip')
-
-        // 登录请求
-        loginBtn.addEventListener('click', async () => {
-            const password = pwdInput.value.trim()
-            if (!password) {
-                errTip.innerText = '请输入密码'
-                return
+        async function login(){
+            const pwd = document.getElementById("pwd").value
+            const res = await fetch("/api/admin/login",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({password:pwd})
+            })
+            const json = await res.json()
+            if(json.success){
+                localStorage.setItem("token",json.token)
+                location.href="index.html"
+            }else{
+                document.getElementById("msg").innerText = json.msg
             }
-
-            loginBtn.disabled = true
-            loginBtn.innerText = '登录中...'
-            errTip.innerText = ''
-
-            try {
-                const res = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ password })
-                })
-
-                const data = await res.json()
-
-                if (data.success) {
-                    // 登录成功，存储令牌跳转后台首页
-                    localStorage.setItem('blog_token', data.token)
-                    location.href = '/admin/index.html'
-                } else {
-                    errTip.innerText = data.message || '密码错误'
-                }
-            } catch (e) {
-                errTip.innerText = '网络请求失败'
-            } finally {
-                loginBtn.disabled = false
-                loginBtn.innerText = '登录后台'
-            }
-        })
-
-        // 回车登录
-        pwdInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') loginBtn.click()
-        })
+        }
     </script>
 </body>
 </html>
