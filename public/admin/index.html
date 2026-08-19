@@ -3,38 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理员登录</title>
+    <title>文章管理</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
-        .box{max-width:400px;margin:6rem auto;padding:2rem}
-        input{width:100%;padding:0.75rem;margin:0.5rem 0;border:1px solid #ccc;border-radius:6px}
-        button{width:100%;padding:0.75rem;background:#222;color:#fff;border:none;border-radius:6px;cursor:pointer}
-        #msg{margin-top:1rem;color:red}
+        .container{max-width:800px;margin:3rem auto;padding:0 1rem}
+        .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
+        button{padding:0.5rem 1rem;cursor:pointer}
+        .item{display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-bottom:1px solid #eee}
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>后台登录</h2>
-        <input type="password" id="pwd" placeholder="管理员密码">
-        <button onclick="login()">登录</button>
-        <div id="msg"></div>
+    <div class="container">
+        <div class="bar">
+            <h2>文章管理</h2>
+            <button onclick="location.href='editor.html'">新建文章</button>
+        </div>
+        <div id="list"></div>
     </div>
     <script>
-        async function login(){
-            const pwd = document.getElementById("pwd").value
-            const res = await fetch("/api/admin/login",{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({password:pwd})
+        const token = localStorage.getItem("token")
+        if(!token) location.href="login.html"
+
+        async function load(){
+            const res = await fetch("/api/admin/articles",{
+                headers:{"Authorization":token}
             })
             const json = await res.json()
-            if(json.success){
-                localStorage.setItem("token",json.token)
-                location.href="index.html"
-            }else{
-                document.getElementById("msg").innerText = json.msg
-            }
+            const wrap = document.getElementById("list")
+            json.data.forEach(art=>{
+                const div = document.createElement("div")
+                div.className="item"
+                div.innerHTML=`
+                    <div>${art.title} ${art.is_draft?"【草稿】":""}</div>
+                    <div>
+                        <button onclick="edit(${art.id})">编辑</button>
+                        <button onclick="del(${art.id})">删除</button>
+                    </div>
+                `
+                wrap.appendChild(div)
+            })
         }
+        function edit(id){
+            location.href=`editor.html?id=${id}`
+        }
+        async function del(id){
+            if(!confirm("确定删除？")) return
+            await fetch("/api/admin/article/delete",{
+                method:"DELETE",
+                headers:{"Authorization":token,"Content-Type":"application/json"},
+                body:JSON.stringify({id})
+            })
+            load()
+        }
+        load()
     </script>
 </body>
 </html>
