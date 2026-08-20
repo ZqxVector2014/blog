@@ -1,11 +1,9 @@
 # 忽略wrangler配置（里面有密钥）
 wrangler.jsonc
 
-# 依赖包
+# 依赖、编译产物
 node_modules
-
-# 构建输出目录
 dist
 
-# Mac系统隐藏文件
+# 系统文件
 .DS_Store
